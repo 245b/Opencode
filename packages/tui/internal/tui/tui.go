@@ -1533,6 +1533,7 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 			if cmd != nil {
 				cmds = append(cmds, cmd)
 			}
+			return a, tea.Batch(cmds...)
 		}
 		a.pendingSubmit = true
 		a.pendingSubmitToken++
