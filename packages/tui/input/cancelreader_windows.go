@@ -109,9 +109,16 @@ func prepareConsole(input windows.Handle, modes ...uint32) (originalMode uint32,
 		return 0, fmt.Errorf("get console mode: %w", err)
 	}
 
-	var newMode uint32
+	newMode := originalMode
+	var extended bool
 	for _, mode := range modes {
+		if mode == windows.ENABLE_EXTENDED_FLAGS {
+			extended = true
+		}
 		newMode |= mode
+	}
+	if extended {
+		newMode &^= windows.ENABLE_QUICK_EDIT_MODE
 	}
 
 	err = windows.SetConsoleMode(input, newMode)

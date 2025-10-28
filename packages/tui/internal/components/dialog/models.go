@@ -46,6 +46,21 @@ type ModelWithProvider struct {
 	Provider opencode.Provider
 }
 
+const preferredProviderID = "henosis"
+const preferredProviderName = "Henosis"
+const preferredModelID = "operator"
+const preferredModelAltID = "deepseek-reasoner"
+
+func isPreferredModel(model ModelWithProvider) bool {
+	if model.Provider.ID != preferredProviderID {
+		return false
+	}
+	if model.Model.ID == preferredModelID {
+		return true
+	}
+	return model.Model.ID == preferredModelAltID
+}
+
 // modelItem is a custom list item for model selections
 type modelItem struct {
 	model ModelWithProvider
@@ -70,8 +85,15 @@ func (m modelItem) Render(
 		Foreground(t.TextMuted()).
 		Background(t.BackgroundPanel())
 
-	modelPart := itemStyle.Render(m.model.Model.Name)
-	providerPart := providerStyle.Render(fmt.Sprintf(" %s", m.model.Provider.Name))
+	modelName := m.model.Model.Name
+	providerPartText := fmt.Sprintf(" %s", m.model.Provider.Name)
+	if isPreferredModel(m.model) {
+		modelName = "operator"
+		providerPartText = " henosis"
+	}
+
+	modelPart := itemStyle.Render(modelName)
+	providerPart := providerStyle.Render(providerPartText)
 
 	combinedText := modelPart + providerPart
 	return baseStyle.
@@ -203,9 +225,16 @@ func (m *modelDialog) setupAllModels() {
 }
 
 func (m *modelDialog) sortModels() {
-	sort.Slice(m.allModels, func(i, j int) bool {
+	sort.SliceStable(m.allModels, func(i, j int) bool {
 		modelA := m.allModels[i]
 		modelB := m.allModels[j]
+
+		if isPreferredModel(modelA) && !isPreferredModel(modelB) {
+			return true
+		}
+		if isPreferredModel(modelB) && !isPreferredModel(modelA) {
+			return false
+		}
 
 		usageA := m.getModelUsageTime(modelA.Provider.ID, modelA.Model.ID)
 		usageB := m.getModelUsageTime(modelB.Provider.ID, modelB.Model.ID)
@@ -340,7 +369,17 @@ func (m *modelDialog) buildGroupedResults() []list.Item {
 	for name := range providerGroups {
 		providerNames = append(providerNames, name)
 	}
-	sort.Strings(providerNames)
+	sort.Slice(providerNames, func(i, j int) bool {
+		nameA := providerNames[i]
+		nameB := providerNames[j]
+		if nameA == preferredProviderName && nameB != preferredProviderName {
+			return true
+		}
+		if nameB == preferredProviderName && nameA != preferredProviderName {
+			return false
+		}
+		return nameA < nameB
+	})
 
 	// Add provider groups
 	for _, providerName := range providerNames {
@@ -350,6 +389,13 @@ func (m *modelDialog) buildGroupedResults() []list.Item {
 		sort.Slice(models, func(i, j int) bool {
 			modelA := models[i]
 			modelB := models[j]
+
+			if isPreferredModel(modelA) && !isPreferredModel(modelB) {
+				return true
+			}
+			if isPreferredModel(modelB) && !isPreferredModel(modelA) {
+				return false
+			}
 
 			usageA := m.getModelUsageTime(modelA.Provider.ID, modelA.Model.ID)
 			usageB := m.getModelUsageTime(modelB.Provider.ID, modelB.Model.ID)

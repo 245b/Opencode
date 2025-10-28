@@ -20,6 +20,7 @@ export namespace Agent {
         edit: Config.Permission,
         bash: z.record(z.string(), Config.Permission),
         webfetch: Config.Permission.optional(),
+        websearch: Config.Permission.optional(),
       }),
       model: z
         .object({
@@ -45,6 +46,7 @@ export namespace Agent {
         "*": "allow",
       },
       webfetch: "allow",
+      websearch: "allow",
     }
     const agentPermission = mergeAgentPermissions(defaultPermission, cfg.permission ?? {})
 
@@ -90,6 +92,7 @@ export namespace Agent {
           "*": "ask",
         },
         webfetch: "allow",
+        websearch: "allow",
       },
       cfg.permission ?? {},
     )
@@ -243,6 +246,7 @@ function mergeAgentPermissions(basePermission: any, overridePermission: any): Ag
   const result: Agent.Info["permission"] = {
     edit: merged.edit ?? "allow",
     webfetch: merged.webfetch ?? "allow",
+    websearch: merged.websearch ?? "allow",
     bash: mergedBash ?? { "*": "allow" },
   }
 

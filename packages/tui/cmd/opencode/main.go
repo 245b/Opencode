@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -124,12 +125,22 @@ func main() {
 		panic(err)
 	}
 
+	vt := true
+	if runtime.GOOS == "windows" {
+		vt = enableWindowsConsole()
+		if !vt {
+			slog.Debug("windowsconsole: virtual terminal sequences not fully enabled")
+		}
+	}
+
 	tuiModel := tui.NewModel(app_).(*tui.Model)
-	program := tea.NewProgram(
-		tuiModel,
-		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
-	)
+	opts := []tea.ProgramOption{}
+	alt := runtime.GOOS != "windows" || vt
+	if alt {
+		opts = append(opts, tea.WithAltScreen())
+	}
+	opts = append(opts, tea.WithMouseCellMotion())
+	program := tea.NewProgram(tuiModel, opts...)
 
 	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)

@@ -415,7 +415,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       }
 
       const hasValidParts = (message: Message) => {
-        return sync.data.part[message.id]?.filter(valid).length > 0
+        const parts = sync.data.part[message.id]
+        if (!parts) return false
+        for (const part of parts) {
+          if (valid(part)) return true
+        }
+        return false
       }
       // const hasTextPart = (message: Message) => {
       //   return !!sync.data.part[message.id]?.filter(valid).find((p) => p.type === "text")

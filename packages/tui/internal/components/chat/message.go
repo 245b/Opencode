@@ -38,6 +38,8 @@ type blockRenderer struct {
 	marginBottom    int
 }
 
+const toolOutputMaxLines = 200
+
 type renderingOption func(*blockRenderer)
 
 func WithTextColor(color compat.AdaptiveColor) renderingOption {
@@ -631,7 +633,11 @@ func renderToolDetails(
 		case "webfetch":
 			if format, ok := toolInputMap["format"].(string); ok && result != nil {
 				body = *result
-				body = util.TruncateHeight(body, 10)
+				lines := strings.Count(body, "\n") + 1
+				if lines > toolOutputMaxLines {
+					body = util.TruncateHeight(body, toolOutputMaxLines)
+					body += "\n\n" + mutedStyle(fmt.Sprintf("Output truncated to %d lines", toolOutputMaxLines))
+				}
 				if format == "html" || format == "markdown" {
 					body = util.ToMarkdown(body, width, backgroundColor)
 				}
@@ -642,9 +648,9 @@ func renderToolDetails(
 				for _, item := range todos.([]any) {
 					todo := item.(map[string]any)
 					content := todo["content"]
-          if content == nil {
-            continue
-          }
+					if content == nil {
+						continue
+					}
 					switch todo["status"] {
 					case "completed":
 						body += fmt.Sprintf("- [x] %s\n", content)
@@ -700,7 +706,11 @@ func renderToolDetails(
 				result = &empty
 			}
 			body = *result
-			body = util.TruncateHeight(body, 10)
+			lines := strings.Count(body, "\n") + 1
+			if lines > toolOutputMaxLines {
+				body = util.TruncateHeight(body, toolOutputMaxLines)
+				body += "\n\n" + mutedStyle(fmt.Sprintf("Output truncated to %d lines", toolOutputMaxLines))
+			}
 			body = defaultStyle(body)
 		}
 	}
@@ -726,7 +736,11 @@ func renderToolDetails(
 
 	if body == "" && error == "" && result != nil {
 		body = *result
-		body = util.TruncateHeight(body, 10)
+		lines := strings.Count(body, "\n") + 1
+		if lines > toolOutputMaxLines {
+			body = util.TruncateHeight(body, toolOutputMaxLines)
+			body += "\n\n" + mutedStyle(fmt.Sprintf("Output truncated to %d lines", toolOutputMaxLines))
+		}
 		body = defaultStyle(body)
 	}
 

@@ -320,12 +320,16 @@ export namespace Provider {
     // load env
     for (const [providerID, provider] of Object.entries(database)) {
       if (disabled.has(providerID)) continue
-      const apiKey = provider.env.map((item) => process.env[item]).at(0)
-      if (!apiKey) continue
+      const envValues = provider.env
+        .map((name) => process.env[name])
+        .map((value) => (typeof value === "string" ? value.trim() : ""))
+        .filter((value) => value.length > 0)
+      if (envValues.length === 0) continue
+      const apiKey = envValues[0]
+      const includeApiKey = envValues.length === 1
       mergeProvider(
         providerID,
-        // only include apiKey if there's only one potential option
-        provider.env.length === 1 ? { apiKey } : {},
+        includeApiKey ? { apiKey } : {},
         "env",
       )
     }
@@ -529,7 +533,7 @@ export namespace Provider {
     }
   }
 
-  const priority = ["gemini-2.5-pro-preview", "gpt-5", "claude-sonnet-4"]
+  const priority = ["gemini-2.5-pro-preview", "gpt-5", "claude-sonnet-4", "deepseek-reasoner", "operator"]
   export function sort(models: ModelsDev.Model[]) {
     return sortBy(
       models,

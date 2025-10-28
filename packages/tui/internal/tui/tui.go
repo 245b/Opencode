@@ -38,6 +38,11 @@ type InterruptDebounceTimeoutMsg struct{}
 // ExitDebounceTimeoutMsg is sent when the exit key debounce timeout expires
 type ExitDebounceTimeoutMsg struct{}
 
+// submitDebounceTimeoutMsg is sent when the pending submit debounce completes
+type submitDebounceTimeoutMsg struct {
+	token int
+}
+
 // InterruptKeyState tracks the state of interrupt key presses for debouncing
 type InterruptKeyState int
 
@@ -56,6 +61,7 @@ const (
 
 const interruptDebounceTimeout = 1 * time.Second
 const exitDebounceTimeout = 1 * time.Second
+const submitDebounceDelay = 25 * time.Millisecond
 
 type Model struct {
 	tea.Model
@@ -76,6 +82,8 @@ type Model struct {
 	toastManager         *toast.ToastManager
 	interruptKeyState    InterruptKeyState
 	exitKeyState         ExitKeyState
+	pendingSubmit        bool
+	pendingSubmitToken   int
 	messagesRight        bool
 }
 
@@ -102,6 +110,15 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
+		if a.pendingSubmit {
+			a.pendingSubmit = false
+			updatedEditor, newlineCmd := a.editor.Newline()
+			a.editor = updatedEditor.(chat.EditorComponent)
+			if newlineCmd != nil {
+				cmds = append(cmds, newlineCmd)
+			}
+		}
+
 		keyString := msg.String()
 
 		if a.app.CurrentPermission.ID != "" {
@@ -765,17 +782,39 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Reset exit key state after timeout
 		a.exitKeyState = ExitKeyIdle
 		a.editor.SetExitKeyInDebounce(false)
+	case submitDebounceTimeoutMsg:
+		if !a.pendingSubmit || msg.token != a.pendingSubmitToken {
+			return a, nil
+		}
+		a.pendingSubmit = false
+		updatedEditor, cmd := a.editor.Submit()
+		a.editor = updatedEditor.(chat.EditorComponent)
+		return a, cmd
 	case tea.PasteMsg, tea.ClipboardMsg:
-		// Paste events: prioritize modal if active, otherwise editor
+		if a.pendingSubmit {
+			a.pendingSubmit = false
+			updatedEditor, newlineCmd := a.editor.Newline()
+			a.editor = updatedEditor.(chat.EditorComponent)
+			if newlineCmd != nil {
+				cmds = append(cmds, newlineCmd)
+			}
+		}
+
 		if a.modal != nil {
 			updatedModal, cmd := a.modal.Update(msg)
 			a.modal = updatedModal.(layout.Modal)
-			return a, cmd
-		} else {
-			updatedEditor, cmd := a.editor.Update(msg)
-			a.editor = updatedEditor.(chat.EditorComponent)
-			return a, cmd
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			return a, tea.Batch(cmds...)
 		}
+
+		updatedEditor, cmd := a.editor.Update(msg)
+		a.editor = updatedEditor.(chat.EditorComponent)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+		return a, tea.Batch(cmds...)
 
 	// API
 	case api.Request:
@@ -1487,9 +1526,21 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 		a.editor = updated.(chat.EditorComponent)
 		cmds = append(cmds, cmd)
 	case commands.InputSubmitCommand:
-		updated, cmd := a.editor.Submit()
-		a.editor = updated.(chat.EditorComponent)
-		cmds = append(cmds, cmd)
+		if a.pendingSubmit {
+			a.pendingSubmit = false
+			updated, cmd := a.editor.Submit()
+			a.editor = updated.(chat.EditorComponent)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+		a.pendingSubmit = true
+		a.pendingSubmitToken++
+		token := a.pendingSubmitToken
+		cmds = append(cmds, tea.Tick(submitDebounceDelay, func(time.Time) tea.Msg {
+			return submitDebounceTimeoutMsg{token: token}
+		}))
+		return a, tea.Batch(cmds...)
 	case commands.InputNewlineCommand:
 		updated, cmd := a.editor.Newline()
 		a.editor = updated.(chat.EditorComponent)

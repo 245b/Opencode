@@ -1,3 +1,57 @@
 {
-  "$schema": "https://opencode.ai/config.json"
+    "$schema":  "https://opencode.ai/config.json",
+    "model":  "henosis/operator",
+    "agent":  {
+                  "build":  {
+                                "model":  "henosis/operator",
+                                "temperature":  0.3
+                            },
+                  "plan":  {
+                               "model":  "henosis/operator",
+                               "temperature":  0.3
+                           },
+                  "general":  {
+                                  "model":  "henosis/operator",
+                                  "temperature":  0.3
+                              }
+              },
+    "provider":  {
+                     "henosis":  {
+                                     "name":  "Henosis",
+                                     "api":  "https://api.deepseek.com",
+                                     "env":  [
+                                                 "HENOSIS_API_KEY",
+                                                 "DEEPSEEK_API_KEY"
+                                             ],
+                                     "npm":  "@ai-sdk/openai-compatible",
+                                     "models":  {
+                                                    "operator":  {
+                                                                     "id":  "deepseek-reasoner",
+                                                                     "name":  "Henosis - operator (default)",
+                                                                     "attachment":  true,
+                                                                     "reasoning":  true,
+                                                                     "temperature":  true,
+                                                                     "tool_call":  true,
+                                                                     "cost":  {
+                                                                                  "input":  1,
+                                                                                  "output":  4,
+                                                                                  "cache_read":  0,
+                                                                                  "cache_write":  0
+                                                                              },
+                                                                     "limit":  {
+                                                                                   "context":  64000,
+                                                                                   "output":  8192
+                                                                               },
+                                                                     "modalities":  {
+                                                                                        "input":  [
+                                                                                                      "text"
+                                                                                                  ],
+                                                                                        "output":  [
+                                                                                                       "text"
+                                                                                                   ]
+                                                                                    }
+                                                                 }
+                                                }
+                                 }
+                 }
 }

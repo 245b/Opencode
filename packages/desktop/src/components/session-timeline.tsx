@@ -271,11 +271,21 @@ export default function SessionTimeline(props: { session: string; class?: string
   }
 
   const hasValidParts = (message: Message) => {
-    return sync.data.part[message.id]?.filter(valid).length > 0
+    const parts = sync.data.part[message.id]
+    if (!parts) return false
+    for (const part of parts) {
+      if (valid(part)) return true
+    }
+    return false
   }
 
   const hasTextPart = (message: Message) => {
-    return !!sync.data.part[message.id]?.filter(valid).find((p) => p.type === "text")
+    const parts = sync.data.part[message.id]
+    if (!parts) return false
+    for (const part of parts) {
+      if (valid(part) && part.type === "text") return true
+    }
+    return false
   }
 
   const session = createMemo(() => sync.session.get(props.session))

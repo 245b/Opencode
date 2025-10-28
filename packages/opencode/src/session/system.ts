@@ -1,4 +1,4 @@
-import { Ripgrep } from "../file/ripgrep"
+﻿import { Ripgrep } from "../file/ripgrep"
 import { Global } from "../global"
 import { Filesystem } from "../util/filesystem"
 import { Config } from "../config/config"
@@ -12,21 +12,26 @@ import PROMPT_ANTHROPIC_WITHOUT_TODO from "./prompt/qwen.txt"
 import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
 import PROMPT_ANTHROPIC_SPOOF from "./prompt/anthropic_spoof.txt"
+import PROMPT_HENOSIS_HEADER from "./prompt/henosis_header.txt"
 import PROMPT_SUMMARIZE from "./prompt/summarize.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import PROMPT_CODEX from "./prompt/codex.txt"
+import PROMPT_HENOSIS from "./prompt/henosis.txt"
 
 export namespace SystemPrompt {
   export function header(providerID: string) {
     if (providerID.includes("anthropic")) return [PROMPT_ANTHROPIC_SPOOF.trim()]
+    if (providerID === "henosis" || providerID === "deepseek") return [PROMPT_HENOSIS_HEADER.trim()]
     return []
   }
 
   export function provider(modelID: string) {
-    if (modelID.includes("gpt-5")) return [PROMPT_CODEX]
-    if (modelID.includes("gpt-") || modelID.includes("o1") || modelID.includes("o3")) return [PROMPT_BEAST]
-    if (modelID.includes("gemini-")) return [PROMPT_GEMINI]
-    if (modelID.includes("claude")) return [PROMPT_ANTHROPIC]
+    const value = modelID.toLowerCase()
+    if (value.includes("gpt-5")) return [PROMPT_CODEX]
+    if (value.includes("gpt-") || value.includes("o1") || value.includes("o3")) return [PROMPT_BEAST]
+    if (value.includes("gemini-")) return [PROMPT_GEMINI]
+    if (value.includes("operator") || value.includes("deepseek-reasoner")) return [PROMPT_HENOSIS]
+    if (value.includes("claude")) return [PROMPT_ANTHROPIC]
     return [PROMPT_ANTHROPIC_WITHOUT_TODO]
   }
 
@@ -117,6 +122,8 @@ export namespace SystemPrompt {
     switch (providerID) {
       case "anthropic":
         return [PROMPT_ANTHROPIC_SPOOF.trim(), PROMPT_SUMMARIZE]
+      case "henosis":
+        return [PROMPT_HENOSIS_HEADER.trim(), PROMPT_SUMMARIZE]
       default:
         return [PROMPT_SUMMARIZE]
     }
@@ -126,8 +133,12 @@ export namespace SystemPrompt {
     switch (providerID) {
       case "anthropic":
         return [PROMPT_ANTHROPIC_SPOOF.trim(), PROMPT_TITLE]
+      case "henosis":
+        return [PROMPT_HENOSIS_HEADER.trim(), PROMPT_TITLE]
       default:
         return [PROMPT_TITLE]
     }
   }
 }
+
+
