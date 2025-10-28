@@ -168,6 +168,7 @@
       "version": "0.15.18",
       "bin": {
         "opencode": "./bin/opencode",
+        "operator": "./bin/opencode",
       },
       "dependencies": {
         "@actions/core": "1.11.1",
