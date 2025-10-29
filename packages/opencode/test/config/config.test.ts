@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test"
 import { Config } from "../../src/config/config"
+import { Agent } from "../../src/agent/agent"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
@@ -347,6 +348,88 @@ test("gets config directories", async () => {
     fn: async () => {
       const dirs = await Config.directories()
       expect(dirs.length).toBeGreaterThanOrEqual(1)
+    },
+  })
+})
+
+test("configures operator and claude agents with builtin MCP servers", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const config = {
+        $schema: "https://opencode.ai/config.json",
+        model: "henosis/operator",
+        agent: {
+          build: {
+            model: "henosis/operator",
+          },
+          plan: {
+            model: "anthropic/claude-sonnet-4-5-20250929",
+          },
+        },
+        mcp: {
+          sequential: {
+            type: "local",
+            command: [
+              "bun",
+              "run",
+              "packages/opencode/src/mcp/server/cli.ts",
+              "sequential",
+            ],
+            enabled: true,
+          },
+          sketch: {
+            type: "local",
+            command: [
+              "bun",
+              "run",
+              "packages/opencode/src/mcp/server/cli.ts",
+              "sketch",
+            ],
+            enabled: true,
+          },
+          duckduckgo: {
+            type: "local",
+            command: [
+              "bun",
+              "run",
+              "packages/opencode/src/mcp/server/cli.ts",
+              "duckduckgo",
+            ],
+            enabled: true,
+          },
+        },
+      }
+      await Bun.write(path.join(dir, "opencode.json"), JSON.stringify(config))
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      const sequential = config.mcp?.sequential
+      if (sequential?.type !== "local") throw new Error("sequential server should be local")
+      expect(sequential.command).toEqual([
+        "bun",
+        "run",
+        "packages/opencode/src/mcp/server/cli.ts",
+        "sequential",
+      ])
+      expect(config.mcp?.sketch?.enabled).toBe(true)
+      const duck = config.mcp?.duckduckgo
+      if (duck?.type !== "local") throw new Error("duckduckgo server should be local")
+      expect(duck.command).toEqual([
+        "bun",
+        "run",
+        "packages/opencode/src/mcp/server/cli.ts",
+        "duckduckgo",
+      ])
+
+      const build = await Agent.get("build")
+      const plan = await Agent.get("plan")
+
+      expect(build.model).toEqual({ providerID: "henosis", modelID: "operator" })
+      expect(plan.model).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4-5-20250929" })
     },
   })
 })
