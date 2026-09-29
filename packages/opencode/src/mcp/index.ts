@@ -151,21 +151,26 @@ export namespace MCP {
     },
   )
 
-  export async function status() {
-    return state().then((state) => {
-      const result: Record<string, "connected" | "failed" | "disabled"> = {}
-      for (const [key, client] of Object.entries(state.config)) {
-        if (client.enabled === false) {
-          result[key] = "disabled"
-          continue
-        }
-        if (state.clients[key]) {
-          result[key] = "connected"
-        }
-        result[key] = "failed"
+  type Status = Record<string, "connected" | "failed" | "disabled">
+
+  export function evaluateStatus(config: Record<string, { enabled?: boolean }>, clients: Record<string, unknown>): Status {
+    const result: Status = {}
+    for (const [key, definition] of Object.entries(config)) {
+      if (definition.enabled === false) {
+        result[key] = "disabled"
+        continue
       }
-      return result
-    })
+      if (clients[key]) {
+        result[key] = "connected"
+        continue
+      }
+      result[key] = "failed"
+    }
+    return result
+  }
+
+  export async function status() {
+    return state().then((state) => evaluateStatus(state.config, state.clients))
   }
 
   export async function clients() {
