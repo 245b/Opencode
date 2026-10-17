@@ -9,14 +9,23 @@ import { rehypeHeadingIds } from "@astrojs/markdown-remark"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
 import { spawnSync } from "child_process"
 
+const target = process.env.DEPLOY_TARGET
+const pages = target === "github-pages"
+const site = process.env.ASTRO_SITE ?? config.url
+const base = process.env.ASTRO_BASE ?? "/docs"
+const adapter = pages
+  ? undefined
+  : cloudflare({
+      imageService: "passthrough",
+    })
+const output = pages ? "static" : "server"
+
 // https://astro.build/config
 export default defineConfig({
-  site: config.url,
-  base: "/docs",
-  output: "server",
-  adapter: cloudflare({
-    imageService: "passthrough",
-  }),
+  site,
+  base,
+  output,
+  adapter,
   devToolbar: {
     enabled: false,
   },
